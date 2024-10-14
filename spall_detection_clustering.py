@@ -2,60 +2,61 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 1. Load the image and convert to grayscale
-image = cv2.imread('./PositiveSet/PositiveSet/Sample293.bmp', cv2.IMREAD_GRAYSCALE)
+# 1. Load image and convert to grayscale
+image_path = './PositiveSet/PositiveSet/Sample42.bmp'  # Path to your uploaded image
+image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
-# 2. Apply Median Filter to remove noise
+# 2. Apply Median Filter (using OpenCV's built-in function)
 image_filtered = cv2.medianBlur(image, 3)
 
-# 3. Apply Gabor filter to extract features
-def gabor_filter(image, theta, lambd, gamma, psi, sigma):
+# 3. Apply Gabor Filter (using OpenCV's built-in function)
+def apply_gabor_filter(image, theta, lambd, gamma, psi, sigma):
     kernel = cv2.getGaborKernel((21, 21), sigma, theta, lambd, gamma, psi, ktype=cv2.CV_32F)
-    filtered_img = cv2.filter2D(image, cv2.CV_8UC3, kernel)
-    return filtered_img
+    gabor_image = cv2.filter2D(image, cv2.CV_8UC3, kernel)
+    return gabor_image
 
-theta_values = [0, np.pi/4, np.pi/2, 3*np.pi/4]  # Gabor orientations
-gabor_features = []
+# Gabor filter parameters
+theta = 0  # Gabor filter orientation
+lambd = 10  # Wavelength
+gamma = 0.5  # Aspect ratio
+psi = 0  # Phase offset
+sigma = 4  # Standard deviation
 
-# Collect Gabor filtered images
-for theta in theta_values:
-    gabor_img = gabor_filter(image_filtered, theta, 10, 0.5, 0, 4)
-    gabor_features.append(gabor_img)
+# Apply Gabor filter
+gabor_image = apply_gabor_filter(image_filtered, theta, lambd, gamma, psi, sigma)
 
-# 4. Binarize the first Gabor filtered image
-_, binary_segment = cv2.threshold(gabor_features[0], 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+# 4. Apply Otsu Thresholding (using OpenCV's built-in function)
+_, binary_image = cv2.threshold(gabor_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-# 5. Find contours for segmented objects
-contours, _ = cv2.findContours(binary_segment, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-segmented_image = np.zeros_like(binary_segment)
-for cnt in contours:
-    cv2.drawContours(segmented_image, [cnt], -1, 255, thickness=cv2.FILLED)
+# 5. Find contours (using OpenCV's built-in function)
+contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+segmented_image = np.zeros_like(binary_image)
+cv2.drawContours(segmented_image, contours, -1, (255), thickness=cv2.FILLED)
 
-# Display the results
-plt.figure(figsize=(10, 8))
+# Convert the segmented image to color for visualization
+segmented_colored = np.zeros((segmented_image.shape[0], segmented_image.shape[1], 3), dtype=np.uint8)
+segmented_colored[:, :, 0] = binary_image  # Red channel for segmented object
+segmented_colored[:, :, 2] = 255 - binary_image  # Blue background
 
-# Original Image
-plt.subplot(2, 2, 1)
+# Plot the results
+plt.figure(figsize=(15, 5))
+
+# Image sample
+plt.subplot(1, 3, 1)
 plt.imshow(image, cmap='gray')
-plt.title("Original Image")
+plt.title("Image sample")
 plt.axis('off')
 
-# Filtered Image
-plt.subplot(2, 2, 2)
-plt.imshow(image_filtered, cmap='gray')
-plt.title("Filtered Image")
+# Gabor filtered image
+plt.subplot(1, 3, 2)
+plt.imshow(gabor_image, cmap='gray')
+plt.title("Gabor filter")
 plt.axis('off')
 
-# Gabor Filtered Image
-plt.subplot(2, 2, 3)
-plt.imshow(gabor_features[0], cmap='gray')
-plt.title("Gabor Filtered Image")
-plt.axis('off')
-
-# Segmented Image
-plt.subplot(2, 2, 4)
-plt.imshow(segmented_image, cmap='gray')
-plt.title("Segmented Image")
+# Segmented image
+plt.subplot(1, 3, 3)
+plt.imshow(segmented_colored)
+plt.title("Segmented image")
 plt.axis('off')
 
 plt.tight_layout()
